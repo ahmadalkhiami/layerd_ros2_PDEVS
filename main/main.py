@@ -5,13 +5,18 @@ Main entry point for ROS2 DEVS simulation.
 import argparse
 import sys
 import time
+import os
 from pathlib import Path
+
+# Add parent directory to Python path to import from sibling directories
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pypdevs.simulator import Simulator
 from core.trace import trace_logger
 from simulation.config import SimulationConfig, ConfigPresets
 from simulation import create_system
 from simulation.validator import TraceValidator, PerformanceValidator
+from simulation.enhanced_validator import EnhancedValidator, ValidationLevel
 from simulation.analyzer import SimulationAnalyzer
 
 def parse_args():
@@ -188,22 +193,23 @@ def validate_simulation(traces):
     """Validate simulation results"""
     print("\nValidating simulation results...")
     
-    # Create validators
-    trace_validator = TraceValidator()
-    perf_validator = PerformanceValidator()
+    # Create enhanced validator
+    validator = EnhancedValidator(ValidationLevel.STANDARD)
     
     # Run validation
-    trace_valid = trace_validator.validate(traces)
-    perf_valid = perf_validator.validate(traces)
+    results = validator.validate(traces)
     
-    if trace_valid and perf_valid:
+    # Print summary
+    validator.print_summary()
+    
+    # Save results
+    validator.save_results("validation_results.json")
+    
+    if results["failed_rules"] == 0:
         print("✅ Validation passed")
     else:
         print("❌ Validation failed")
-        if not trace_valid:
-            print("  - Trace validation errors found")
-        if not perf_valid:
-            print("  - Performance validation errors found")
+        print(f"  - {results['failed_rules']} validation errors found")
 
 def analyze_simulation(traces, output_dir):
     """Analyze simulation results"""
@@ -231,8 +237,8 @@ def main():
         # Run simulation
         traces = run_simulation(args)
         
-        # Save traces
-        trace_logger.save_json(f"{args.output_dir}/traces.json")
+        # Save traces in ROS2-compatible format
+        trace_logger.save_traces(f"{args.output_dir}/ros2_traces.csv")
         
         # Validate if requested
         if args.validate:

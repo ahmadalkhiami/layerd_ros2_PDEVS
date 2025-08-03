@@ -1,6 +1,7 @@
 """
 Execution context management for ROS2 components.
 Handles thread contexts, process mapping, and CPU affinity.
+Compatible with ROS2 tracing format.
 """
 
 from dataclasses import dataclass
@@ -24,6 +25,15 @@ class ExecutionContext:
     def __str__(self) -> str:
         return (f"Context(tid={self.thread_id}, pid={self.process_id}, "
                 f"cpu={self.cpu_id}, component={self.component_name})")
+    
+    def to_ros2_context(self) -> Dict[str, Any]:
+        """Convert to ROS2-compatible context format"""
+        return {
+            'cpu_id': self.cpu_id,
+            'procname': self.process_name,
+            'vtid': self.thread_id,
+            'vpid': self.process_id
+        }
 
 
 class ContextManager:
@@ -32,8 +42,8 @@ class ContextManager:
     def __init__(self, num_cpus: int = 4):
         self._lock = threading.Lock()
         self._contexts: Dict[str, ExecutionContext] = {}
-        self._thread_counter = 1000
-        self._process_counter = 5000
+        self._thread_counter = 6900  # Start from 6900 like original model
+        self._process_counter = 6900  # Start from 6900 like original model
         self._cpu_affinity_map: Dict[int, Set[str]] = {i: set() for i in range(num_cpus)}
         self._num_cpus = num_cpus
         
@@ -103,6 +113,13 @@ class ContextManager:
         with self._lock:
             return self._contexts.get(component_name)
     
+    def get_ros2_context(self, component_name: str) -> Optional[Dict[str, Any]]:
+        """Get ROS2-compatible context for a component"""
+        context = self.get_context(component_name)
+        if context:
+            return context.to_ros2_context()
+        return None
+    
     def migrate_component(self, component_name: str, new_cpu_id: int):
         """Migrate component to different CPU"""
         with self._lock:
@@ -129,13 +146,13 @@ class ContextManager:
             return self._process_tree.copy()
     
     def _next_thread_id(self) -> int:
-        """Generate next thread ID"""
+        """Generate next thread ID (starting from 6900 like original)"""
         tid = self._thread_counter
         self._thread_counter += 1
         return tid
     
     def _next_process_id(self) -> int:
-        """Generate next process ID"""
+        """Generate next process ID (starting from 6900 like original)"""
         pid = self._process_counter
         self._process_counter += 1
         return pid

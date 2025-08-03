@@ -3,7 +3,7 @@ Core module for ROS2 DEVS simulation.
 Provides fundamental types, context management, tracing, and configuration.
 """
 
-from .types import (
+from .dataTypes import (
     # Message types
     MessageType,
     Message,
@@ -58,7 +58,7 @@ from .trace import (
     trace_callback_end
 )
 
-from .config import (
+from simulation.config import (
     NetworkConfig,
     ExecutorConfig,
     DDSConfig,
